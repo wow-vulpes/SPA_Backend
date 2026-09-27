@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:17.11
+    environment:
+      POSTGRES_DB: ${DB_NAME:-spa}
+      POSTGRES_USER: ${DB_USER:-spa}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-spa}
+    volumes:
+      - spa-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  app:
+    build: .
+    environment:
+      APP_PORT: 8080
+      APP_TIME_ZONE: ${APP_TIME_ZONE:-Europe/Moscow}
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-spa}
+      DB_USER: ${DB_USER:-spa}
+      DB_PASSWORD: ${DB_PASSWORD:-spa}
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:8080/actuator/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+volumes:
+  spa-postgres-data:

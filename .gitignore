@@ -1,0 +1,6 @@
+target/
+.env
+.idea/
+*.iml
+docs/local-decisions.md
+AGENTS.md
