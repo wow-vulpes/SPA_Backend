@@ -7,4 +7,6 @@ public interface BatchRepository extends Repository<Batch, Long> {
   Batch save(Batch batch);
 
   Optional<Batch> findById(Long id);
+
+  Optional<Batch> findByPositionIdAndBatchNumber(Long positionId, String batchNumber);
 }

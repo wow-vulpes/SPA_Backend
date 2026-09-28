@@ -9,4 +9,6 @@ public interface MovementRepository extends Repository<Movement, Long> {
   Optional<Movement> findById(Long id);
 
   Optional<Movement> findByDocumentNumber(String documentNumber);
+
+  Optional<Movement> findFirstByPositionIdOrderByOperationDateDescIdDesc(Long positionId);
 }
