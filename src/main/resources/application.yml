@@ -18,6 +18,7 @@ management:
   endpoints.web.exposure.include: health
   endpoint.health.show-details: never
 app:
+  demo.enabled: ${APP_DEMO_ENABLED:false}
   time-zone: ${APP_TIME_ZONE:Europe/Moscow}
   alerts:
     shortage-days: ${APP_ALERTS_SHORTAGE_DAYS:30}
