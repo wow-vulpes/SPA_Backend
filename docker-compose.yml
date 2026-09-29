@@ -17,6 +17,9 @@ services:
     environment:
       APP_PORT: 8080
       APP_TIME_ZONE: ${APP_TIME_ZONE:-Europe/Moscow}
+      APP_ALERTS_SHORTAGE_DAYS: ${APP_ALERTS_SHORTAGE_DAYS:-30}
+      APP_ALERTS_EXPIRY_DAYS: ${APP_ALERTS_EXPIRY_DAYS:-30}
+      APP_ALERTS_INACTIVITY_DAYS: ${APP_ALERTS_INACTIVITY_DAYS:-90}
       DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-spa}
       DB_USER: ${DB_USER:-spa}
       DB_PASSWORD: ${DB_PASSWORD:-spa}

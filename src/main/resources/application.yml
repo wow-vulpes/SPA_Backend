@@ -19,3 +19,7 @@ management:
   endpoint.health.show-details: never
 app:
   time-zone: ${APP_TIME_ZONE:Europe/Moscow}
+  alerts:
+    shortage-days: ${APP_ALERTS_SHORTAGE_DAYS:30}
+    expiry-days: ${APP_ALERTS_EXPIRY_DAYS:30}
+    inactivity-days: ${APP_ALERTS_INACTIVITY_DAYS:90}
