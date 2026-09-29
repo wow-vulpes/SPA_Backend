@@ -1,5 +1,6 @@
 package com.example.spa.movement;
 
+import com.example.spa.validation.InputValues;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
@@ -13,6 +14,7 @@ public final class MovementRules {
     text(command.documentNumber(), 128, "Номер документа");
     require(command.type() != null, "INVALID_TYPE", "Необходим тип операции");
     require(command.operationDate() != null, "INVALID_DATE", "Необходима дата операции");
+    InputValues.calendarDate(command.operationDate());
     require(
         !command.operationDate().isAfter(today),
         "FUTURE_DATE",
@@ -49,6 +51,7 @@ public final class MovementRules {
       text(command.batch().number(), 128, "Номер партии");
       text(command.batch().invoiceNumber(), 128, "Накладная");
       require(command.batch().expiresOn() != null, "INVALID_BATCH", "Необходим срок годности");
+      InputValues.calendarDate(command.batch().expiresOn());
       decimal(command.batch().unitPrice(), 15, 4);
       require(
           command.batch().unitPrice().signum() >= 0,
@@ -58,6 +61,7 @@ public final class MovementRules {
   }
 
   private static void text(String value, int max, String name) {
+    InputValues.databaseText(value);
     require(
         value != null && !value.isBlank() && value.length() <= max,
         "INVALID_FIELD",

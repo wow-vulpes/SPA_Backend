@@ -6,6 +6,8 @@ import java.util.List;
 
 public record ForecastResult(
     String sku,
+    String name,
+    String unit,
     String location,
     LocalDate asOf,
     LocalDate periodEndExclusive,
@@ -30,12 +32,20 @@ public record ForecastResult(
     LocalDate expectedArrivalDate,
     BigDecimal projectedExpiredQuantity,
     BigDecimal projectedUnmetDemand,
-    List<String> explanation,
+    Explanation explanation,
     List<Warning> warnings) {
   public ForecastResult {
-    explanation = List.copyOf(explanation);
     warnings = List.copyOf(warnings);
   }
 
   public record Warning(String code, String message) {}
+
+  public record Explanation(
+      List<String> dataUsed, List<String> formulas, List<String> assumptions, LocalDate asOf) {
+    public Explanation {
+      dataUsed = List.copyOf(dataUsed);
+      formulas = List.copyOf(formulas);
+      assumptions = List.copyOf(assumptions);
+    }
+  }
 }

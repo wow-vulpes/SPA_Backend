@@ -23,7 +23,9 @@ public final class ForecastCalculator {
       BigDecimal available,
       BigDecimal price,
       List<Batch> batches,
-      boolean limitedHistory) {
+      boolean limitedHistory,
+      String name,
+      String unit) {
     public Input {
       batches = List.copyOf(batches);
     }
@@ -126,9 +128,8 @@ public final class ForecastCalculator {
           new Warning(
               "LEAD_TIME_RISK",
               "Новый заказ, размещённый сегодня, не успевает к первому дефициту"));
-    List<String> explanation =
+    List<String> formulas =
         List.of(
-            "Горизонт: [" + today + ", " + end + "), календарных дней: " + days,
             "Средний расход = "
                 + input.consumed().toPlainString()
                 + " / 90; сегодня в историю не входит",
@@ -146,11 +147,41 @@ public final class ForecastCalculator {
                 + command.packSize().toPlainString()
                 + ") × "
                 + command.packSize().toPlainString(),
-            "Цена взята из последнего RECEIPT выбранного SKU/объекта, по дате и ID движения",
-            "Дата заказа: первая календарная точка заказа, не позже дефицит − срок поставки, не раньше сегодня; поставки доступны с начала дня",
-            "Объём — агрегатная рекомендация. Календарная симуляция FEFO проверяет риски без нового заказа, не оптимизирует график закупок");
+            "Стоимость = рекомендуемый объём × цена последнего поступления; округление HALF_UP до 2 знаков",
+            "Дата заказа: первая календарная точка заказа, не позже дефицит − срок поставки, не раньше сегодня");
+    List<String> assumptions = new ArrayList<>();
+    assumptions.add(
+        "Цена взята из последнего RECEIPT выбранного SKU/объекта, по дате и ID движения; при отсутствии поступления неизвестна");
+    assumptions.add(
+        "Поставки доступны с начала дня. Объём — агрегатная рекомендация; календарная FEFO-симуляция проверяет риски без нового заказа и не оптимизирует график закупок");
+    warnings.stream().map(Warning::message).forEach(assumptions::add);
+    var explanation =
+        new ForecastResult.Explanation(
+            List.of(
+                "Расход CONSUME за ["
+                    + today.minusDays(90)
+                    + ", "
+                    + today
+                    + "): "
+                    + input.consumed(),
+                "Физический остаток на "
+                    + today
+                    + ": "
+                    + input.physical()
+                    + "; доступный: "
+                    + input.available(),
+                "Поставки из запроса в горизонте [" + today + ", " + end + "): " + incoming,
+                "Срок поставки: "
+                    + command.leadTimeDays()
+                    + "; страховые дни: "
+                    + command.safetyDays()),
+            formulas,
+            assumptions,
+            today);
     return new ForecastResult(
         command.sku(),
+        input.name(),
+        input.unit(),
         command.location(),
         today,
         end,

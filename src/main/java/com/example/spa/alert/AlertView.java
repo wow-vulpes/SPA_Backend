@@ -29,7 +29,7 @@ public final class AlertView {
       LocalDate asOf,
       LocalDate consumptionFrom,
       LocalDate consumptionTo,
-      int shortageDays,
+      int leadTimeDays,
       int expiryDays,
       int inactivityDays,
       List<Item> items,

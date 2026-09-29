@@ -23,13 +23,15 @@ public class AlertService {
     LocalDate from = today.minusDays(StockMetrics.WINDOW_DAYS);
     LocalDate inactiveThrough = today.minusDays(properties.inactivityDays());
     LocalDate expiryThrough = today.plusDays(properties.expiryDays());
+    int leadTimeDays =
+        filter.leadTimeDays() == null ? properties.leadTimeDays() : filter.leadTimeDays();
     long total =
         repository.countAlerts(
             filter.sku(),
             filter.location(),
             today,
             from,
-            properties.shortageDays(),
+            leadTimeDays,
             inactiveThrough,
             expiryThrough);
     var items =
@@ -39,19 +41,19 @@ public class AlertService {
                 filter.location(),
                 today,
                 from,
-                properties.shortageDays(),
+                leadTimeDays,
                 inactiveThrough,
                 expiryThrough,
                 filter.limit(),
                 filter.offset())
             .stream()
-            .map(this::item)
+            .map(row -> item(row, leadTimeDays))
             .toList();
     return new AlertView.Page(
         today,
         from,
         today.minusDays(1),
-        properties.shortageDays(),
+        leadTimeDays,
         properties.expiryDays(),
         properties.inactivityDays(),
         items,
@@ -60,14 +62,14 @@ public class AlertService {
         filter.offset());
   }
 
-  private AlertView.Item item(AlertRow row) {
+  private AlertView.Item item(AlertRow row, int leadTimeDays) {
     var metrics = StockMetrics.calculate(row.getConsumed(), row.getAvailableStock());
     String message =
         switch (row.getType()) {
           case "SHORTAGE" ->
-              "Доступного остатка недостаточно на "
-                  + properties.shortageDays()
-                  + " дней при среднем расходе за 90 полных дней";
+              "Запаса меньше, чем срок поставки "
+                  + leadTimeDays
+                  + " дней, при среднем расходе за 90 полных дней";
           case "EXPIRED" ->
               "Положительный остаток партии с истёкшим сроком годности; требуется проверить списание";
           case "EXPIRING" ->

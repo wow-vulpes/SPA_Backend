@@ -9,6 +9,7 @@ import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.transaction.TransactionTimedOutException;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -84,6 +85,11 @@ public class ApiExceptionHandler {
   @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
   public ResponseEntity<ApiError> media(HttpMediaTypeNotSupportedException ignored) {
     return error(415, "UNSUPPORTED_MEDIA_TYPE", "Используйте application/json");
+  }
+
+  @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+  public ResponseEntity<Void> unacceptable(HttpMediaTypeNotAcceptableException ignored) {
+    return ResponseEntity.status(406).build();
   }
 
   @ExceptionHandler(NoResourceFoundException.class)

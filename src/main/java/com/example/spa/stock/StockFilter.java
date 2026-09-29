@@ -1,6 +1,7 @@
 package com.example.spa.stock;
 
 import com.example.spa.movement.MovementException;
+import com.example.spa.validation.InputValues;
 
 public record StockFilter(String sku, String location, int limit, int offset) {
   public StockFilter {
@@ -14,6 +15,7 @@ public record StockFilter(String sku, String location, int limit, int offset) {
   }
 
   public static String identifier(String value) {
+    InputValues.databaseText(value);
     if (value == null) return null;
     String result = value.strip();
     if (result.isEmpty() || result.length() > 64) throw invalid();

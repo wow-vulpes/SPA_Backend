@@ -41,7 +41,7 @@ public interface AlertRepository extends Repository<InventoryPosition, Long> {
           case when m.available=0 then 'CRITICAL' else 'WARNING' end as severity,
           cast(null as bigint) as batch_id, cast(null as varchar) as batch_number,
           cast(null as numeric) as batch_quantity, cast(null as date) as expires_on
-        from metrics m where m.consumed>0 and m.available*90 < m.consumed*:shortageDays
+        from metrics m where m.consumed>0 and m.available*90 < m.consumed*:leadTimeDays
         union all
         select m.*, 'NO_MOVEMENT', 'INFO', null, null, null, null
         from metrics m where m.physical>0 and m.last_date <= :inactiveThrough
@@ -60,7 +60,7 @@ public interface AlertRepository extends Repository<InventoryPosition, Long> {
       @Param("location") String location,
       @Param("today") LocalDate today,
       @Param("fromDate") LocalDate from,
-      @Param("shortageDays") int shortageDays,
+      @Param("leadTimeDays") int leadTimeDays,
       @Param("inactiveThrough") LocalDate inactiveThrough,
       @Param("expiryThrough") LocalDate expiryThrough);
 
@@ -83,7 +83,7 @@ public interface AlertRepository extends Repository<InventoryPosition, Long> {
       @Param("location") String location,
       @Param("today") LocalDate today,
       @Param("fromDate") LocalDate from,
-      @Param("shortageDays") int shortageDays,
+      @Param("leadTimeDays") int leadTimeDays,
       @Param("inactiveThrough") LocalDate inactiveThrough,
       @Param("expiryThrough") LocalDate expiryThrough,
       @Param("limit") int limit,

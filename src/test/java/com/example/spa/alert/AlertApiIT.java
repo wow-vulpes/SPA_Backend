@@ -37,7 +37,7 @@ import tools.jackson.databind.ObjectMapper;
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {
-      "app.alerts.shortage-days=7",
+      "app.alerts.lead-time-days=7",
       "app.alerts.expiry-days=10",
       "app.alerts.inactivity-days=20"
     })
@@ -226,6 +226,25 @@ class AlertApiIT {
         TODAY.minusDays(100),
         expiry,
         "INV-" + number);
+  }
+
+  @Test
+  void shortageUsesRequestedDeliveryLeadTimeWithoutChangingOtherAlerts() throws Exception {
+    var equal = get("?lead_time_days=3").body();
+    assertThat(types(equal)).doesNotContain("SHORTAGE");
+    assertThat(equal.path("lead_time_days").asInt()).isEqualTo(3);
+    assertThat(equal.path("shortage_days").asInt()).isEqualTo(3);
+    assertThat(types(get("?lead_time_days=4").body())).contains("SHORTAGE");
+    assertThat(types(get("?lead_time_days=0").body())).doesNotContain("SHORTAGE");
+    assertThat(get("?lead_time_days=-1").status()).isEqualTo(422);
+    assertThat(get("?lead_time_days=3651").status()).isEqualTo(422);
+    assertThat(get("?lead_time_days=1.5").status()).isEqualTo(422);
+    assertThat(get("?lead_time_days=").status()).isEqualTo(422);
+  }
+
+  @Test
+  void nullCharacterInFilterIs422() throws Exception {
+    assertThat(get("?sku=OIL%00INVALID").status()).isEqualTo(422);
   }
 
   private void move(int position, int batch, String type, LocalDate date, String quantity) {

@@ -1,5 +1,6 @@
 package com.example.spa.movement;
 
+import com.example.spa.validation.InputValues;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.Locale;
@@ -40,6 +41,7 @@ public record MovementHistoryFilter(
   }
 
   private static String identifier(String value) {
+    InputValues.databaseText(value);
     if (value == null) return null;
     String normalized = value.strip();
     if (normalized.isEmpty() || normalized.length() > 64)
@@ -61,7 +63,9 @@ public record MovementHistoryFilter(
     try {
       if (!value.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}"))
         throw invalid("Дата должна иметь формат YYYY-MM-DD");
-      return LocalDate.parse(value);
+      LocalDate result = LocalDate.parse(value);
+      InputValues.calendarDate(result);
+      return result;
     } catch (DateTimeParseException e) {
       throw invalid("Некорректная календарная дата");
     }

@@ -7,6 +7,8 @@ import java.util.List;
 
 public record ForecastResponse(
     String sku,
+    String name,
+    String unit,
     String location,
     @JsonProperty("as_of") LocalDate asOf,
     @JsonProperty("period_end_exclusive") LocalDate periodEndExclusive,
@@ -31,12 +33,58 @@ public record ForecastResponse(
     @JsonProperty("expected_arrival_date") LocalDate expectedArrivalDate,
     @JsonProperty("projected_expired_quantity") BigDecimal projectedExpiredQuantity,
     @JsonProperty("projected_unmet_demand") BigDecimal projectedUnmetDemand,
-    List<String> explanation,
+    Explanation explanation,
     List<Warning> warnings) {
   public ForecastResponse {
-    explanation = List.copyOf(explanation);
     warnings = List.copyOf(warnings);
   }
 
-  public record Warning(String code, String message) {}
+  @JsonProperty("period")
+  public Period period() {
+    return new Period(asOf, periodEndExclusive.minusDays(1), horizonDays);
+  }
+
+  @JsonProperty("avg_daily_consumption")
+  public BigDecimal avgDailyConsumption() {
+    return averageDailyConsumption;
+  }
+
+  @JsonProperty("incoming_qty")
+  public BigDecimal incomingQty() {
+    return incomingQuantity;
+  }
+
+  @JsonProperty("recommended_purchase_qty")
+  public BigDecimal recommendedPurchaseQty() {
+    return recommendedQuantity;
+  }
+
+  @JsonProperty("stockout_date")
+  public LocalDate stockoutDate() {
+    return firstShortageDate;
+  }
+
+  public record Period(LocalDate from, LocalDate to, long days) {}
+
+  public record Explanation(
+      @JsonProperty("data_used") List<String> dataUsed,
+      List<String> formulas,
+      List<String> assumptions,
+      @JsonProperty("as_of") LocalDate asOf) {
+    public Explanation {
+      dataUsed = List.copyOf(dataUsed);
+      formulas = List.copyOf(formulas);
+      assumptions = List.copyOf(assumptions);
+    }
+  }
+
+  public record Warning(String code, String message) {
+    @JsonProperty("level")
+    public String level() {
+      return switch (code) {
+        case "CONSTANT_DEMAND_MODEL", "DELIVERY_ASSUMPTION", "DELIVERY_OUTSIDE_HORIZON" -> "info";
+        default -> "warning";
+      };
+    }
+  }
 }

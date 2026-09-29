@@ -20,7 +20,9 @@ public class AlertController {
       @RequestParam(required = false) String sku,
       @RequestParam(required = false) String location,
       @RequestParam(required = false) String limit,
-      @RequestParam(required = false) String offset) {
-    return mapper.toResponse(service.list(AlertFilter.parse(sku, location, limit, offset)));
+      @RequestParam(required = false) String offset,
+      @RequestParam(name = "lead_time_days", required = false) String leadTimeDays) {
+    return mapper.toResponse(
+        service.list(AlertFilter.parse(sku, location, limit, offset, leadTimeDays)));
   }
 }

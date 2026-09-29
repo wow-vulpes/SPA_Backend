@@ -7,6 +7,7 @@ import com.example.spa.movement.MovementException;
 import com.example.spa.stock.persistence.InventoryPositionRepository;
 import com.example.spa.stock.persistence.StockReadRepository;
 import com.example.spa.stock.persistence.StockRepository;
+import com.example.spa.validation.InputValues;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -29,6 +30,9 @@ public class ForecastService {
 
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ, timeout = 15)
   public ForecastResult calculate(ForecastCommand command) {
+    InputValues.databaseText(command.sku());
+    InputValues.databaseText(command.location());
+    command.openDeliveries().forEach(d -> InputValues.calendarDate(d.expectedDate()));
     LocalDate today = LocalDate.now(clock);
     if (!List.of(1, 3, 6, 12).contains(command.horizonMonths()))
       throw MovementException.invalid(
@@ -37,9 +41,10 @@ public class ForecastService {
       throw MovementException.invalid(
           "PAST_DELIVERY_DATE",
           "Ожидаемая поставка не может быть в прошлом; укажите актуальную ожидаемую дату");
-    products
-        .findById(command.sku())
-        .orElseThrow(() -> MovementException.notFound("SKU_NOT_FOUND", "Товар не найден"));
+    var product =
+        products
+            .findById(command.sku())
+            .orElseThrow(() -> MovementException.notFound("SKU_NOT_FOUND", "Товар не найден"));
     locations
         .findById(command.location())
         .orElseThrow(() -> MovementException.notFound("LOCATION_NOT_FOUND", "Объект не найден"));
@@ -48,7 +53,15 @@ public class ForecastService {
     if (position.isEmpty()) {
       input =
           new ForecastCalculator.Input(
-              today, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null, List.of(), true);
+              today,
+              BigDecimal.ZERO,
+              BigDecimal.ZERO,
+              BigDecimal.ZERO,
+              null,
+              List.of(),
+              true,
+              product.getName(),
+              product.getUnit());
     } else {
       var p = position.orElseThrow();
       var row =
@@ -70,7 +83,9 @@ public class ForecastService {
               row.getAvailableStock(),
               prices.latestReceiptPrice(p.getId()).orElse(null),
               batches,
-              p.getRegisteredOn().isAfter(today.minusDays(90)));
+              p.getRegisteredOn().isAfter(today.minusDays(90)),
+              product.getName(),
+              product.getUnit());
     }
     return ForecastCalculator.calculate(command, input);
   }

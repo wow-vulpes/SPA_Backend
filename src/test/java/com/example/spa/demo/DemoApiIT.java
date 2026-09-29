@@ -148,6 +148,25 @@ class DemoApiIT {
   }
 
   @Test
+  void readinessAndReadFiltersHaveControlledHttpStatuses() throws Exception {
+    assertThat(request("/actuator/health/readiness", null).status()).isEqualTo(200);
+    assertThat(request("/api/stock?sku=DEMO%00INVALID", null).status()).isEqualTo(422);
+    assertThat(request("/api/movements?location=DEMO%00INVALID", null).status()).isEqualTo(422);
+    assertThat(request("/api/movements?date_from=0000-01-01", null).status()).isEqualTo(422);
+    try (var client = HttpClient.newHttpClient()) {
+      var r =
+          client.send(
+              HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/stock"))
+                  .timeout(Duration.ofSeconds(15))
+                  .header("Accept", "text/plain")
+                  .GET()
+                  .build(),
+              HttpResponse.BodyHandlers.ofString());
+      assertThat(r.statusCode()).isEqualTo(406);
+    }
+  }
+
+  @Test
   void failureLateInSeedRollsBackAllDemoData() {
     clear();
     jdbc.execute(

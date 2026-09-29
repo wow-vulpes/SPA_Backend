@@ -1,119 +1,34 @@
-# Матрица проверок
+# Проверки
 
-Локальный `./mvnw -B -ntp spotless:apply verify` от 29.09.2026: успешно,
-35 unit-тестов и 137 интеграционных сценариев, 0 ошибок, 0 пропусков.
-PostgreSQL 17.11 через Testcontainers 2.0.5. CI на GitHub в этом шаге не запускался.
+Полный запуск: `./mvnw -B -ntp clean verify`. Unit-тесты не требуют Docker;
+интеграционные тесты используют PostgreSQL 17.11 через Testcontainers.
+Последний локальный запуск: 43 unit + 168 integration, без ошибок и пропусков.
+Enforcer, Spotless и SpotBugs пройдены; JaCoCo формирует отчёт покрытия.
 
-| Требование | Сценарии | Тесты | Результат |
-| --- | --- | --- | --- |
-| TIME-01 | Clock с UTC и Europe/Moscow | TimeConfigurationTest (2) | Пройдены; неверная зона и binding default пока не покрыты |
-| DATA-01/02/03/08 | JPA round-trip всех сущностей, точные дроби, цена/дата/накладная | InventoryPersistenceIT.persistsAndReloadsEntireLedgerWithoutLosingDecimalPrecision | Пройден |
-| DATA-04 | Невалидное количество, включая CORRECTION=0 и NaN; неизвестный тип; пустой/необрезанный документ; отрицательная цена | InventoryPersistenceIT.rejectsInvalidMovementQuantities (8), rejectsUnknownOperation, rejectsEmptyOrUntrimmedDocument (2), rejectsNegativePrice | Пройдены |
-| DATA-01/02/03 | Дубли позиции, партии и документа между объектами | InventoryPersistenceIT.rejectsDuplicatePosition, rejectsDuplicateBatchWithinPosition, rejectsDuplicateDocumentAcrossPositions | Пройдены |
-| DATA-05 | Неизвестные ссылки, несовпадение позиции по обоим FK, дубль/ноль распределения, удаление используемой партии | InventoryPersistenceIT.rejectsUnknownProduct, rejectsUnknownLocation, rejectsAllocationToDifferentPosition, rejectsAllocationWithForgedMovementPosition, rejectsDuplicateAllocation, rejectsZeroAllocation, cannotDeleteBatchWithLedgerEntries | Пройдены |
-| DATA-06 | Все пять типов; расход из двух партий без двойного учёта; пустые данные; изоляция SKU/объектов | InventoryPersistenceIT.sumsAllOperationTypesFromAllocationsOnly, splitMovementDoesNotDoubleCountHeaderQuantity, emptyPositionAndEmptyBatchHaveZeroStock, isolatesProductsAndLocations | Пройдены |
-| DATA-07 | Срок вчера/сегодня/завтра; весь остаток просрочен; стабильный порядок партий | InventoryPersistenceIT.expiryFiltersAvailabilityButDoesNotErasePhysicalStock, ordersBatchesByExpiryThenReceiptDateThenId | Пройдены |
-| DATA-09 | Цель блокировки без партий, отсутствующая позиция | InventoryPersistenceIT.exposesLockTargetEvenBeforeAnyBatchesExist | Пройден |
-| DATA-09 | Два соединения: конфликт блокировки и получение после commit; rollback движения/распределений/партии | LedgerTransactionIT (2) | Пройдены |
-| DATA-10 | Пустая БД, Hibernate validate, единая V1, повтор migrate | InventoryPersistenceIT.migratesEmptyDatabaseAndValidatesHibernateMappings, MigrationIT.appliesSingleSchemaMigrationAndIsIdempotent | Пройдены |
-| QA-01 | Компиляция, Enforcer, Spotless, SpotBugs; JaCoCo отчёт | Maven verify | Пройдены |
-
-## Добавлено в шаге 3
-
-| Требование | Проверка | Результат |
+| Требования | Что проверяется | Тесты |
 | --- | --- | --- |
-| MOV-02 | FefoAllocatorTest (3): порядок срока/поступления/ID, дробное распределение, просрочка, будущая партия, нулевой остаток, нехватка | Пройдены |
-| MOV-04 | MovementServiceTest (1), Mockito: неизвестный SKU не вызывает дальнейших обращений и записей | Пройден |
-| MOV-01/02 | MovementApiIT: пять типов, несколько партий, физический/доступный остаток, возврат и списание просрочки | Пройдены |
-| MOV-03 | MovementApiIT: прошлые даты, нехватка конкретной партии, принадлежность партии, откат первой позиции | Пройдены |
-| MOV-03/04 | MovementApiIT: конкурентные расходы, первые поступления, одинаковый документ на разных объектах | Пройдены |
-| MOV-04/DATA-08 | MovementApiIT: 11 вариантов неверного ввода, неизвестные ссылки, повреждённый JSON, повтор документа и реквизиты партии | Пройдены |
+| TIME-01 | Внедряемый Clock, UTC/Moscow, бизнес-дата на границе суток | TimeConfigurationTest, StockApiIT, ForecastApiIT, AlertApiIT |
+| DATA-01…05, DATA-08 | JPA round-trip, точные дроби, FK, уникальность, запрет NaN/нулей/невалидных реквизитов | InventoryPersistenceIT |
+| DATA-06/07 | Суммы распределений без удвоения расхода, пустые позиции/партии, просрочка, разделение SKU/объектов | InventoryPersistenceIT, StockApiIT |
+| DATA-09 | Блокировка позиции, конкуренция двух соединений, атомарный rollback | LedgerTransactionIT, MovementApiIT |
+| DATA-10 | Чистая V1, повтор migrate, Flyway validate, Hibernate validate | MigrationIT, InventoryPersistenceIT |
+| MOV-01/02 | Все пять типов, FEFO по сроку/дате/ID, дробные объёмы, исключение просрочки и будущих партий | FefoAllocatorTest, MovementApiIT |
+| MOV-03 | Принадлежность партии, запрет отрицательного остатка, хронология, конкурирующий расход/поступление/документ | MovementApiIT |
+| MOV-04 | 400/404/409/422, available_quantity при нехватке, дробный batch_id, нулевой символ и крайние даты без записи в БД | MovementApiIT, MovementServiceTest (Mockito) |
+| HIST-01…03 | Фильтры, включительные даты, сортировка, limit/offset/total, пустые результаты, неверный ввод | MovementHistoryFilterTest, MovementHistoryApiIT |
+| STOCK-01…04 | Окно 90 полных дней, только CONSUME, среднее и дни без раннего округления, нулевой/минимальный расход, детализация партий | StockMetricsTest, StockApiIT |
+| FORECAST-01/02 | Календарные месяцы, високосный год, спрос/страховой запас/точка заказа, MOQ и упаковка, стоимость | ForecastCalculatorTest |
+| FORECAST-03…05 | FEFO-симуляция, сроки и даты поставок, дефицит раньше поздней поставки, дата заказа, нехватка при нулевом агрегатном заказе | ForecastCalculatorTest, ForecastApiIT |
+| FORECAST-03/04 | Последний RECEIPT на выбранном объекте, нет цены/позиции, отсутствуют побочные записи, валидация параметров и дат | ForecastApiIT |
+| FORECAST-06 | name/unit, включительный period, числовые поля и совместимые псевдонимы, объект explanation, level у warnings | ForecastApiIT |
+| ALERT-01…03 | Четыре типа, важность, исходные показатели, граничные сроки, отсутствие любых движений, стабильная пагинация предупреждений | AlertApiIT |
+| ALERT-01/04 | Срок поставки из запроса или конфигурации; равенство/нулевой срок; точное сравнение при минимальном расходе | AlertApiIT, AlertConfigurationTest |
+| DEMO-01…03 | Полный demo, FEFO-расход из двух партий, защита от дубля/нехватки, повтор загрузки и непустая база, откат ошибки последнего движения | DemoApiIT |
+| RUN-01, DOC-01 | Readiness, чтение остатков/партий/истории/предупреждений, прогноз; воспроизводимый HTTP-сценарий | DemoApiIT, scripts/demo-smoke.py, Docker Compose |
 
-MovementApiIT содержит 21 сценарий с настоящим HTTP-сервером и PostgreSQL.
-Прежние 34 интеграционных проверки сохранены. Unit-тесты не требуют Docker.
-Нагрузочный тест, удалённый CI и production-развёртывание в этот шаг не входят.
-
-## Добавлено в шаге 4
-
-| Требование | Проверка | Результат |
-| --- | --- | --- |
-| HIST-01/03 | MovementHistoryFilterTest (9): defaults, нормализация, границы и невалидный limit | Пройдены |
-| HIST-01 | MovementHistoryApiIT: отдельные/совместные фильтры, все 5 типов, точность количества и поля ответа | Пройдены |
-| HIST-02 | Две включительные границы и односторонние периоды, дата/ID по убыванию, split расход представлен один раз | Пройдены |
-| HIST-02/03 | offset не кратен limit, total до пагинации, offset за концом, maximum limit, пустая БД | Пройдены |
-| HIST-03 | 19 ошибочных запросов, пустые параметры, неизвестные SKU/объекты, SQL-подобный текст, чувствительность ключей к регистру | Пройдены |
-
-MovementHistoryApiIT: 34 сценария, настоящий HTTP и PostgreSQL. Прежние
-55 интеграционных сценариев проходят без изменения. Snapshot-согласованность
-обеспечивается REPEATABLE_READ; отдельного теста вставки между count и select нет.
-
-## Ревью и шаг 5
-
-| Требование | Сценарии | Проверка |
-| --- | --- | --- |
-| MOV-04 | Дробный batch_id не усекается и не создаёт движение | MovementApiIT.rejectsFractionalBatchIdWithoutTruncatingIt, пройден |
-| STOCK-01/04 | Среднее и дни, нулевой спрос, нулевой остаток, дробный и минимальный спрос | StockMetricsTest, 6 сценариев пройдены |
-| STOCK-01/04/TIME-01 | 90 дней: начало включено, 91-й день и сегодня исключены; только CONSUME; split не удваивается; бизнес-дата отличается от UTC | StockApiIT.computesWindowBalancesAndBusinessDateWithoutJoinMultiplication, пройден |
-| STOCK-02 | Цены, накладные, порядок партий, просроченные и пустые партии; сумма совпадает со списком | StockApiIT.detailAgreesWithListAndIncludesZeroAndExpiredBatches, пройден |
-| STOCK-01/02/04 | Нулевой расход, пустая позиция, товар без позиций, неизвестный SKU, всё просрочено, нулевой остаток | StockApiIT.noDemandEmptyPositionsAndUnstockedProducts, expiredOnlyStockRemainsPhysicalButHasZeroCoverage, пройдены |
-| STOCK-03 | Фильтры, пагинация, неизвестные коды, SQL-подобная строка, 10 вариантов невалидного ввода | StockApiIT, пройдены |
-| STOCK-01/02 | POST поступления → GET список → GET детали; пустая БД; GET не создаёт движений | StockApiIT, пройдены |
-
-StockApiIT — 22 сценария на реальном HTTP/PostgreSQL. Общий набор: 21 unit,
-112 integration. Enforcer, Spotless, SpotBugs, JaCoCo и git diff --check пройдены.
-Docker-образ собран; отдельный Compose-проект spa-review-20260929 прошёл
-healthcheck и сквозную проверку поступления, списка/деталей остатков, истории,
-отклонения дробного ID. Пользовательская БД не использовалась.
-Удалённый CI и нагрузочные измерения не выполнялись.
-
-## Шаг 6
-
-| Требование | Сценарии | Проверка |
-| --- | --- | --- |
-| FORECAST-01/02 | Прогноз, страховой запас, точка заказа, MOQ, кратность упаковке, стоимость | ForecastCalculatorTest.computesDemandSafetyReorderMoqPackAndCost, пройден |
-| FORECAST-01 | Месяц с 31-го числа, високосный февраль, квартал/полугодие/год | ForecastCalculatorTest.usesCalendarMonths (5), пройдены |
-| FORECAST-02/03 | Нет потребности — нет MOQ-заказа; нет расхода/цены — null даты/стоимость; минимальный расход сохраняется | ForecastCalculatorTest (3 сценария), пройдены |
-| FORECAST-03/05 | Включённый срок годности, FEFO, поздняя/сегодняшняя/граничная поставка, дата будущего заказа и риск lead time | ForecastCalculatorTest (5 сценариев), пройдены |
-| FORECAST-01/03 | Реальный PostgreSQL: расход/остаток/последний RECEIPT старой партии, цена выбранного объекта, расчёт ничего не записывает | ForecastApiIT.computesFromLedgerAndLatestReceiptEventAtSelectedLocation, пройден |
-| FORECAST-03/04/05 | Поставки из запроса не сохраняются; нет позиции/цены; просрочка; все 4 горизонта; неизвестные ссылки | ForecastApiIT, пройдены |
-| FORECAST-04 | 14 вариантов ошибок: обязательные поля, горизонт, дробные дни, MOQ/упаковка, пустой ключ, дата/количество/null элемента, лимит списка | ForecastApiIT.rejectsInvalidParameters, пройдены |
-
-Новые проверки: 14 unit и 25 HTTP/PostgreSQL. Итого 35 unit + 137 integration,
-без ошибок/пропусков. Полная verify включает Spotless/SpotBugs/Enforcer и JaCoCo.
-Docker Compose отдельно в шаге 6 не поднимался: API проверен встроенным HTTP
-сервером в интеграционных тестах. Контейнеры и процессы тестов после завершения
-проверены: работающих не осталось. Удалённый CI и нагрузочные тесты не выполнялись.
-
-## Шаг 7
-
-| Требование | Сценарии | Проверка |
-| --- | --- | --- |
-| ALERT-01/02 | Все четыре вида, важность, точные исходные показатели, несколько партий и изоляция объектов | AlertApiIT.returnsEvidenceAndAllFourKindsAtConfiguredBoundaries, пройден |
-| ALERT-02 | Равенство порогу не дефицит; нулевой доступный запас — CRITICAL; расход на границе 90 дней, исключение сегодня/91 день/других типов; минимальное положительное количество | AlertApiIT (3 сценария), пройдены |
-| ALERT-02 | Просроченные/сегодняшние/граничные сроки; нулевые партии; отсутствие движения ровно на пороге и сброс любым типом операции | AlertApiIT (2 сценария, включая общую проверку), пройдены |
-| ALERT-03 | Постраничный обход нескольких предупреждений одной позиции, одинаковые сроки, total при offset за концом; четыре варианта пустого результата | AlertApiIT (5 сценариев), пройдены |
-| ALERT-03 | 9 вариантов невалидного фильтра, 422 INVALID_ALERT_FILTER | AlertApiIT.invalidFilterIs422, пройдены |
-| ALERT-04 | Дата Москвы при предыдущей дате UTC; HTTP на PostgreSQL с переопределёнными порогами; отсутствие записей | AlertApiIT, пройдены |
-| ALERT-04 | Значения по умолчанию, переопределение/нулевой порог срока, 7 ошибок конфигурации | AlertConfigurationTest, пройдены |
-
-Новые проверки: 8 unit + 19 HTTP/PostgreSQL; полный verify — 43 unit +
-156 integration без ошибок/пропусков. Spotless/SpotBugs/Enforcer пройдены,
-JaCoCo сформирован. Compose-конфигурация валидна; отдельный Compose-запуск,
-нагрузочные тесты и удалённый CI в шаге 7 не выполнялись. После тестов
-контейнеры и Java-процессы тестов/приложения завершены.
-
-## Шаг 8
-
-| Требование | Сценарий | Проверка |
-| --- | --- | --- |
-| RUN-01, DEMO-01 | Старт приложения с demo, 4 товара/2 объекта/6 партий/101 движение, реальные правила всех пяти типов операций | DemoApiIT и Compose, пройдены |
-| DEMO-02 | Повторная загрузка без дублей; непустая пользовательская база не изменяется | DemoApiIT.completeScenarioFromSeedToForecastFefoAndDuplicateProtection и skipsNonemptyDatabaseWithoutAddingOrChangingData, пройдены |
-| DEMO-02 | Ошибка последней операции откатывает все шесть таблиц; затем повторный запуск успешен | DemoApiIT.failureLateInSeedRollsBackAllDemoData, пройден |
-| DEMO-03, MOV/STOCK/HIST/FORECAST/ALERT | История 90 расходов, остаток 20, все виды предупреждений, закупка 20/5000 RUB, FEFO расход 11 из двух партий, 409/422 без лишних записей | DemoApiIT, пройден |
-| RUN-01, DOC-01 | docker compose up на чистом временном томе; health; scripts/demo-smoke.py до и после restart app | Пройдено вручную 29.09.2026 |
-
-Полный verify: 43 unit + 159 integration, без ошибок/пропусков. Форматирование,
-SpotBugs и Enforcer пройдены. Ручной HTTP-smoke: 0,007–0,101 секунды на
-запрос, только небольшой demo, не нагрузочный тест. Временные контейнеры,
-сеть и том удалены после проверки; порт 18086 освобождён. Удалённый CI
-и метрики точности прогнозирования на реальных данных не проверялись.
+Count и страница в читающих сервисах используют REPEATABLE_READ; отдельный
+тест вставки между count и select отсутствует. Нагрузочное тестирование,
+прогнозная точность на реальных данных и удалённый запуск GitHub Actions
+не входят в приведённые результаты. HTTP-smoke проверяет небольшой demo,
+не заменяет нагрузочные испытания. Автоматические тесты не обращаются
+к постоянной базе и не используют H2.

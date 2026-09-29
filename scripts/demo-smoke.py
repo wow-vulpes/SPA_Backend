@@ -29,7 +29,7 @@ def main():
         if not condition:
             raise RuntimeError(message + "; use a fresh demo database on its initialization date")
 
-    check(request("/actuator/health")["status"] == "UP", "Application is not healthy")
+    check(request("/actuator/health/readiness")["status"] == "UP", "Application is not ready")
     stock = request("/api/stock?sku=DEMO-OIL&location=DEMO-CENTER")["items"]
     check(len(stock) == 1, "Demo oil position missing")
     check(stock[0]["available_stock"] == 20, "Expected available oil stock 20")
@@ -47,6 +47,14 @@ def main():
     })
     check(forecast["recommended_quantity"] == 20, "Expected procurement quantity 20")
     check(forecast["estimated_cost"] == 5000, "Expected procurement cost 5000 RUB")
+    check(forecast["recommended_purchase_qty"] == forecast["recommended_quantity"],
+          "Forecast contract quantity mismatch")
+    check(forecast["name"] and forecast["unit"], "Product metadata missing")
+    check(set(forecast["period"]) == {"from", "to", "days"}, "Period contract mismatch")
+    check(set(forecast["explanation"]) == {"data_used", "formulas", "assumptions", "as_of"},
+          "Explanation contract mismatch")
+    check(all(w["level"] in {"info", "warning", "critical"} for w in forecast["warnings"]),
+          "Warning severity missing")
     print("Demo checks passed; no movements or orders were written.")
 
 

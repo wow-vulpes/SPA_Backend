@@ -32,6 +32,7 @@
 Количество, MOQ, упаковка: до 13 целых и 6 дробных цифр. Дробные значения
 целочисленных полей отклоняются. Неверные поля/период/даты — 422, повреждённый
 JSON — 400, неизвестный SKU/объект — 404 в общем формате ошибок API.
+Нулевой символ в строках запрещён; даты ограничены годами 0001–9999.
 
 Сроки, MOQ, упаковка и открытые поставки — параметры конкретного расчёта,
 поскольку реестр поставщиков и открытых заказов ещё не реализован. Они не
@@ -102,10 +103,30 @@ id DESC. Повторное поступление в старую партию 
 
 ## Ответ
 
-Ответ содержит исходные остатки, historical_consumption, average_daily_consumption,
-границы периода и истории, все показатели формул, даты, currency="RUB",
-projected_expired_quantity, projected_unmet_demand, explanation (массив строк)
-и warnings (массив объектов code/message). Числовые поля см. формулы выше.
+Ответ содержит sku, name, unit, location и следующие поля контракта:
+
+| Поле | Содержание |
+| --- | --- |
+| period | Объект from/to/days; from и to включительны |
+| avg_daily_consumption | Средний расход за предыдущие 90 полных дней |
+| forecast_demand, current_stock, incoming_qty | Прогноз спроса, физический остаток, поставки в горизонте |
+| safety_stock, reorder_point, recommended_purchase_qty | Страховой запас, точка заказа и объём закупки |
+| unit_price, estimated_cost | Цена последнего поступления и стоимость |
+| recommended_order_date, stockout_date | Даты заказа и первого календарного дефицита, либо null |
+| explanation | Объект data_used (исходные данные), formulas, assumptions и as_of |
+| warnings | Массив объектов level/message/code; level = info или warning |
+
+Дополнительно возвращаются available_stock, historical_consumption,
+consumption_from/consumption_to, as_of, period_end_exclusive, horizon_days,
+net_requirement, expected_arrival_date, projected_expired_quantity,
+projected_unmet_demand, currency="RUB". В отличие от period.to, поле
+period_end_exclusive обозначает исключённую правую границу.
+
+Для совместимости сохранены прежние числовые имена: average_daily_consumption
+= avg_daily_consumption, incoming_quantity = incoming_qty, recommended_quantity
+= recommended_purchase_qty, first_shortage_date = stockout_date. Все пары
+формируются из одного значения. Поле explanation имеет структуру объекта;
+клиентам прежнего массива строк нужно использовать вложенные списки.
 
 Пример значений для 29.09.2026: 90 единиц расхода в истории, доступно 12,
 цена 2.125, остальные параметры из примера запроса. Горизонт — 30 дней,

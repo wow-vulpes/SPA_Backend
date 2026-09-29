@@ -4,3 +4,4 @@ target/
 *.iml
 docs/local-decisions.md
 AGENTS.md
+.local-notes/

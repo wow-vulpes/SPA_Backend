@@ -30,7 +30,7 @@ public final class AlertResponse {
       @JsonProperty("as_of") LocalDate asOf,
       @JsonProperty("consumption_from") LocalDate consumptionFrom,
       @JsonProperty("consumption_to") LocalDate consumptionTo,
-      @JsonProperty("shortage_days") int shortageDays,
+      @JsonProperty("lead_time_days") int leadTimeDays,
       @JsonProperty("expiry_days") int expiryDays,
       @JsonProperty("inactivity_days") int inactivityDays,
       List<Item> items,
@@ -39,6 +39,12 @@ public final class AlertResponse {
       int offset) {
     public Page {
       items = List.copyOf(items);
+    }
+
+    // Compatibility with the original threshold field; both values are the delivery lead time.
+    @JsonProperty("shortage_days")
+    public int shortageDays() {
+      return leadTimeDays;
     }
   }
 }

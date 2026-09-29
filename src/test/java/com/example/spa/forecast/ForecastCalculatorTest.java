@@ -35,7 +35,9 @@ class ForecastCalculatorTest {
         n(stock),
         price == null ? null : n(price),
         List.of(new ForecastCalculator.Batch(1L, date.minusDays(100), expiry, n(stock))),
-        false);
+        false,
+        "Oil",
+        "ml");
   }
 
   @Test
@@ -173,7 +175,9 @@ class ForecastCalculatorTest {
             List.of(
                 new ForecastCalculator.Batch(2L, TODAY.minusDays(2), TODAY.plusYears(1), n("30")),
                 new ForecastCalculator.Batch(1L, TODAY.minusDays(1), TODAY, n("1"))),
-            false);
+            false,
+            "Oil",
+            "ml");
     var r = ForecastCalculator.calculate(command(1, 0, 0, "0", "1", List.of()), in);
     assertThat(r.projectedExpiredQuantity()).isZero();
     assertThat(r.firstShortageDate()).isNull();

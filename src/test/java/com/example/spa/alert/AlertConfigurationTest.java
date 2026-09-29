@@ -19,7 +19,7 @@ class AlertConfigurationTest {
                 .isEqualTo(new AlertProperties(30, 30, 90)));
     context
         .withPropertyValues(
-            "app.alerts.shortage-days=7",
+            "app.alerts.lead-time-days=7",
             "app.alerts.expiry-days=0",
             "app.alerts.inactivity-days=14")
         .run(
@@ -31,10 +31,10 @@ class AlertConfigurationTest {
   @ParameterizedTest
   @ValueSource(
       strings = {
-        "shortage-days=0",
+        "lead-time-days=-1",
         "expiry-days=-1",
         "inactivity-days=0",
-        "shortage-days=3651",
+        "lead-time-days=3651",
         "expiry-days=3651",
         "inactivity-days=3651",
         "expiry-days=1.5"

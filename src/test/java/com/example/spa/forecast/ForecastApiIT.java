@@ -113,7 +113,24 @@ class ForecastApiIT {
     assertThat(b.path("currency").asText()).isEqualTo("RUB");
     assertThat(b.path("first_shortage_date").asText()).isEqualTo(TODAY.plusDays(12).toString());
     assertThat(b.path("recommended_order_date").asText()).isEqualTo(TODAY.plusDays(7).toString());
-    assertThat(b.path("explanation").size()).isGreaterThan(5);
+    assertThat(b.path("name").asText()).isEqualTo("Oil");
+    assertThat(b.path("unit").asText()).isEqualTo("ml");
+    assertThat(b.path("period").path("from").asText()).isEqualTo(TODAY.toString());
+    assertThat(b.path("period").path("to").asText())
+        .isEqualTo(TODAY.plusMonths(1).minusDays(1).toString());
+    assertThat(b.path("period").path("days").asInt()).isEqualTo(30);
+    assertThat(b.path("avg_daily_consumption")).isEqualTo(b.path("average_daily_consumption"));
+    assertThat(b.path("incoming_qty")).isEqualTo(b.path("incoming_quantity"));
+    assertThat(b.path("recommended_purchase_qty")).isEqualTo(b.path("recommended_quantity"));
+    assertThat(b.path("stockout_date")).isEqualTo(b.path("first_shortage_date"));
+    assertThat(b.path("explanation").isObject()).isTrue();
+    assertThat(b.path("explanation").path("data_used").size()).isGreaterThanOrEqualTo(3);
+    assertThat(b.path("explanation").path("formulas").size()).isGreaterThan(5);
+    assertThat(b.path("explanation").path("assumptions").size()).isPositive();
+    assertThat(b.path("explanation").path("as_of").asText()).isEqualTo(TODAY.toString());
+    for (var warning : b.path("warnings")) {
+      assertThat(warning.path("level").asText()).isIn("info", "warning", "critical");
+    }
     assertThat(jdbc.queryForObject("SELECT count(*) FROM movement", Integer.class)).isEqualTo(5);
     assertThat(jdbc.queryForObject("SELECT count(*) FROM inventory_position", Integer.class))
         .isEqualTo(2);
@@ -204,7 +221,9 @@ class ForecastApiIT {
         "past",
         "quantity",
         "null_delivery",
-        "too_many"
+        "too_many",
+        "nul_sku",
+        "extreme_delivery"
       })
   void rejectsInvalidParameters(String scenario) throws Exception {
     var r = request();
@@ -218,6 +237,11 @@ class ForecastApiIT {
       case "moq" -> r.put("minimum_order_quantity", -1);
       case "precision" -> r.put("pack_size", new BigDecimal("0.0000001"));
       case "blank" -> r.put("sku", " ");
+      case "nul_sku" -> r.put("sku", "OIL\u0000INVALID");
+      case "extreme_delivery" ->
+          r.put(
+              "open_deliveries",
+              List.of(Map.of("expected_date", "+999999999-12-31", "quantity", 1)));
       case "date" ->
           r.put("open_deliveries", List.of(Map.of("expected_date", "2026-02-30", "quantity", 1)));
       case "past" ->

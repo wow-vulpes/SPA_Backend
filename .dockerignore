@@ -3,3 +3,5 @@
 target
 .env
 docs/local-decisions.md
+.local-notes
+AGENTS.md

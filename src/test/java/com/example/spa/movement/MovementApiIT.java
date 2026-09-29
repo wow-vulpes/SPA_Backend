@@ -164,7 +164,11 @@ class MovementApiIT {
         "blank",
         "batch",
         "missing",
-        "price"
+        "price",
+        "nul_document",
+        "nul_sku",
+        "ancient_date",
+        "extreme_expiry"
       })
   void invalidRequestsDoNotWrite(String scenario) throws Exception {
     var r = receipt("R", "B", "2026-12-01", "1");
@@ -177,6 +181,21 @@ class MovementApiIT {
       case "date" -> r.put("operation_date", "2026-02-30");
       case "type" -> r.put("type", "unknown");
       case "blank" -> r.put("document_number", " ");
+      case "nul_document" -> r.put("document_number", "R\u0000INVALID");
+      case "nul_sku" -> r.put("sku", "OIL\u0000INVALID");
+      case "ancient_date" -> r.put("operation_date", "-999999999-01-01");
+      case "extreme_expiry" ->
+          r.put(
+              "batch",
+              Map.of(
+                  "number",
+                  "B",
+                  "expires_on",
+                  "+999999999-12-31",
+                  "unit_price",
+                  1,
+                  "invoice_number",
+                  "I"));
       case "batch" -> r.put("batch_id", 1);
       case "missing" -> r.remove("quantity");
       case "price" ->

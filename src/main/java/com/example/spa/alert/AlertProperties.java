@@ -9,6 +9,6 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties("app.alerts")
 public record AlertProperties(
-    @DefaultValue("30") @Min(1) @Max(3650) int shortageDays,
+    @DefaultValue("30") @Min(0) @Max(3650) int leadTimeDays,
     @DefaultValue("30") @Min(0) @Max(3650) int expiryDays,
     @DefaultValue("90") @Min(1) @Max(3650) int inactivityDays) {}
