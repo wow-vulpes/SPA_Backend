@@ -74,7 +74,7 @@ class InventoryPersistenceIT {
 
   @Test
   void migratesEmptyDatabaseAndValidatesHibernateMappings() {
-    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("2");
+    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("1");
     assertThat(flyway.validateWithResult().validationSuccessful).isTrue();
     assertThat(
             jdbc.queryForObject(

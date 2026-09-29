@@ -317,5 +317,15 @@ class MovementApiIT {
     }
   }
 
+  @Test
+  void rejectsFractionalBatchIdWithoutTruncatingIt() throws Exception {
+    var receipt = post(receipt("R-FRACTION", "B-FRACTION", "2026-12-01", "5"));
+    long id = receipt.body().path("allocations").get(0).path("batch_id").asLong();
+    var request = request("writeoff", "W-FRACTION", "1", id);
+    request.put("batch_id", new BigDecimal(id + ".9"));
+    assertThat(post(request).status()).isEqualTo(422);
+    assertThat(count("movement")).isEqualTo(1);
+  }
+
   private record Reply(int status, JsonNode body) {}
 }

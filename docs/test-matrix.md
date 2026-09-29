@@ -1,7 +1,7 @@
 # Матрица проверок
 
-Локальный `./mvnw -B -ntp spotless:apply verify` от 28.09.2026: успешно,
-15 unit-тестов и 89 интеграционных сценариев, 0 ошибок, 0 пропусков.
+Локальный `./mvnw -B -ntp spotless:apply verify` от 29.09.2026: успешно,
+35 unit-тестов и 137 интеграционных сценариев, 0 ошибок, 0 пропусков.
 PostgreSQL 17.11 через Testcontainers 2.0.5. CI на GitHub в этом шаге не запускался.
 
 | Требование | Сценарии | Тесты | Результат |
@@ -15,7 +15,7 @@ PostgreSQL 17.11 через Testcontainers 2.0.5. CI на GitHub в этом ш�
 | DATA-07 | Срок вчера/сегодня/завтра; весь остаток просрочен; стабильный порядок партий | InventoryPersistenceIT.expiryFiltersAvailabilityButDoesNotErasePhysicalStock, ordersBatchesByExpiryThenReceiptDateThenId | Пройдены |
 | DATA-09 | Цель блокировки без партий, отсутствующая позиция | InventoryPersistenceIT.exposesLockTargetEvenBeforeAnyBatchesExist | Пройден |
 | DATA-09 | Два соединения: конфликт блокировки и получение после commit; rollback движения/распределений/партии | LedgerTransactionIT (2) | Пройдены |
-| DATA-10 | Пустая БД, Hibernate validate, V1→V2 с сохранением данных, повтор migrate | InventoryPersistenceIT.migratesEmptyDatabaseAndValidatesHibernateMappings, MigrationIT.upgradesPublishedBaselineAndKeepsExistingData | Пройдены |
+| DATA-10 | Пустая БД, Hibernate validate, единая V1, повтор migrate | InventoryPersistenceIT.migratesEmptyDatabaseAndValidatesHibernateMappings, MigrationIT.appliesSingleSchemaMigrationAndIsIdempotent | Пройдены |
 | QA-01 | Компиляция, Enforcer, Spotless, SpotBugs; JaCoCo отчёт | Maven verify | Пройдены |
 
 ## Добавлено в шаге 3
@@ -46,3 +46,40 @@ MovementApiIT содержит 21 сценарий с настоящим HTTP-с
 MovementHistoryApiIT: 34 сценария, настоящий HTTP и PostgreSQL. Прежние
 55 интеграционных сценариев проходят без изменения. Snapshot-согласованность
 обеспечивается REPEATABLE_READ; отдельного теста вставки между count и select нет.
+
+## Ревью и шаг 5
+
+| Требование | Сценарии | Проверка |
+| --- | --- | --- |
+| MOV-04 | Дробный batch_id не усекается и не создаёт движение | MovementApiIT.rejectsFractionalBatchIdWithoutTruncatingIt, пройден |
+| STOCK-01/04 | Среднее и дни, нулевой спрос, нулевой остаток, дробный и минимальный спрос | StockMetricsTest, 6 сценариев пройдены |
+| STOCK-01/04/TIME-01 | 90 дней: начало включено, 91-й день и сегодня исключены; только CONSUME; split не удваивается; бизнес-дата отличается от UTC | StockApiIT.computesWindowBalancesAndBusinessDateWithoutJoinMultiplication, пройден |
+| STOCK-02 | Цены, накладные, порядок партий, просроченные и пустые партии; сумма совпадает со списком | StockApiIT.detailAgreesWithListAndIncludesZeroAndExpiredBatches, пройден |
+| STOCK-01/02/04 | Нулевой расход, пустая позиция, товар без позиций, неизвестный SKU, всё просрочено, нулевой остаток | StockApiIT.noDemandEmptyPositionsAndUnstockedProducts, expiredOnlyStockRemainsPhysicalButHasZeroCoverage, пройдены |
+| STOCK-03 | Фильтры, пагинация, неизвестные коды, SQL-подобная строка, 10 вариантов невалидного ввода | StockApiIT, пройдены |
+| STOCK-01/02 | POST поступления → GET список → GET детали; пустая БД; GET не создаёт движений | StockApiIT, пройдены |
+
+StockApiIT — 22 сценария на реальном HTTP/PostgreSQL. Общий набор: 21 unit,
+112 integration. Enforcer, Spotless, SpotBugs, JaCoCo и git diff --check пройдены.
+Docker-образ собран; отдельный Compose-проект spa-review-20260929 прошёл
+healthcheck и сквозную проверку поступления, списка/деталей остатков, истории,
+отклонения дробного ID. Пользовательская БД не использовалась.
+Удалённый CI и нагрузочные измерения не выполнялись.
+
+## Шаг 6
+
+| Требование | Сценарии | Проверка |
+| --- | --- | --- |
+| FORECAST-01/02 | Прогноз, страховой запас, точка заказа, MOQ, кратность упаковке, стоимость | ForecastCalculatorTest.computesDemandSafetyReorderMoqPackAndCost, пройден |
+| FORECAST-01 | Месяц с 31-го числа, високосный февраль, квартал/полугодие/год | ForecastCalculatorTest.usesCalendarMonths (5), пройдены |
+| FORECAST-02/03 | Нет потребности — нет MOQ-заказа; нет расхода/цены — null даты/стоимость; минимальный расход сохраняется | ForecastCalculatorTest (3 сценария), пройдены |
+| FORECAST-03/05 | Включённый срок годности, FEFO, поздняя/сегодняшняя/граничная поставка, дата будущего заказа и риск lead time | ForecastCalculatorTest (5 сценариев), пройдены |
+| FORECAST-01/03 | Реальный PostgreSQL: расход/остаток/последний RECEIPT старой партии, цена выбранного объекта, расчёт ничего не записывает | ForecastApiIT.computesFromLedgerAndLatestReceiptEventAtSelectedLocation, пройден |
+| FORECAST-03/04/05 | Поставки из запроса не сохраняются; нет позиции/цены; просрочка; все 4 горизонта; неизвестные ссылки | ForecastApiIT, пройдены |
+| FORECAST-04 | 14 вариантов ошибок: обязательные поля, горизонт, дробные дни, MOQ/упаковка, пустой ключ, дата/количество/null элемента, лимит списка | ForecastApiIT.rejectsInvalidParameters, пройдены |
+
+Новые проверки: 14 unit и 25 HTTP/PostgreSQL. Итого 35 unit + 137 integration,
+без ошибок/пропусков. Полная verify включает Spotless/SpotBugs/Enforcer и JaCoCo.
+Docker Compose отдельно в шаге 6 не поднимался: API проверен встроенным HTTP
+сервером в интеграционных тестах. Контейнеры и процессы тестов после завершения
+проверены: работающих не осталось. Удалённый CI и нагрузочные тесты не выполнялись.
