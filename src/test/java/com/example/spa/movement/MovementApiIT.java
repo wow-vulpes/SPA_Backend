@@ -347,4 +347,47 @@ class MovementApiIT {
   }
 
   private record Reply(int status, JsonNode body) {}
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "garbage",
+        "second_object",
+        "timestamp",
+        "date_array",
+        "epoch_day",
+        "duplicate_quantity",
+        "expiry_timestamp",
+        "expiry_array"
+      })
+  void ambiguousPayloadDoesNotCreateMovement(String scenario) throws Exception {
+    var body = receipt("AMBIGUOUS", "B", "2026-12-01", "1");
+    if (scenario.equals("timestamp")) body.put("operation_date", "2026-09-28T23:59:59");
+    if (scenario.equals("date_array")) body.put("operation_date", List.of(2026, 9, 28));
+    if (scenario.equals("epoch_day")) body.put("operation_date", 0);
+    if (scenario.startsWith("expiry_"))
+      body.put(
+          "batch",
+          Map.of(
+              "number",
+              "B",
+              "expires_on",
+              scenario.equals("expiry_timestamp") ? "2026-12-01T12:00:00" : List.of(2026, 12, 1),
+              "unit_price",
+              1,
+              "invoice_number",
+              "I"));
+    String json = mapper.writeValueAsString(body);
+    json =
+        switch (scenario) {
+          case "garbage" -> json + " invalid-json";
+          case "second_object" -> json + " {}";
+          case "duplicate_quantity" -> json.substring(0, json.length() - 1) + ",\"quantity\":999}";
+          default -> json;
+        };
+    int expectedStatus = List.of("garbage", "duplicate_quantity").contains(scenario) ? 400 : 422;
+    assertThat(send(json).status()).as(scenario).isEqualTo(expectedStatus);
+    assertThat(count("movement")).isZero();
+    assertThat(count("movement_allocation")).isZero();
+  }
 }

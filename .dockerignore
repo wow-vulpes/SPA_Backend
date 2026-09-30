@@ -2,6 +2,6 @@
 .idea
 target
 .env
-docs/local-decisions.md
+docs
 .local-notes
 AGENTS.md

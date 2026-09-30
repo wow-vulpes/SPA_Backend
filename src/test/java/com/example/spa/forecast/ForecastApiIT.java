@@ -223,7 +223,9 @@ class ForecastApiIT {
         "null_delivery",
         "too_many",
         "nul_sku",
-        "extreme_delivery"
+        "extreme_delivery",
+        "delivery_timestamp",
+        "delivery_array"
       })
   void rejectsInvalidParameters(String scenario) throws Exception {
     var r = request();
@@ -238,6 +240,19 @@ class ForecastApiIT {
       case "precision" -> r.put("pack_size", new BigDecimal("0.0000001"));
       case "blank" -> r.put("sku", " ");
       case "nul_sku" -> r.put("sku", "OIL\u0000INVALID");
+      case "delivery_timestamp" ->
+          r.put(
+              "open_deliveries",
+              List.of(Map.of("expected_date", TODAY + "T00:00:00", "quantity", 1)));
+      case "delivery_array" ->
+          r.put(
+              "open_deliveries",
+              List.of(
+                  Map.of(
+                      "expected_date",
+                      List.of(TODAY.getYear(), TODAY.getMonthValue(), TODAY.getDayOfMonth()),
+                      "quantity",
+                      1)));
       case "extreme_delivery" ->
           r.put(
               "open_deliveries",
